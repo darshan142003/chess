@@ -1,6 +1,6 @@
 import { WebSocket } from "ws";
 import { Chess } from "Chess.js"
-import { GAME_OVER, INIT_GAME, MOVE } from "./messages";
+import { GAME_OVER, INIT_GAME, INVALID_MOVE, MOVE } from "./messages";
 
 export class Game {
 
@@ -29,55 +29,63 @@ export class Game {
         }))
     }
 
-    makeMove(socket: WebSocket, move: {
-        from: string;
-        to: string;
-    }) {
-
-        if (this.moveCount % 2 === 0 && socket !== this.player1) {
-            console.log("return from player 1");
-            return;
-        }
-        if (this.moveCount % 2 === 1 && socket !== this.player2) {
-            console.log("Rturn from player 2");
-            return;
-        }
+    makeMove(socket: WebSocket, move: { from: string; to: string }) {
 
         try {
-            this.board.move(move);
-        } catch (e) {
-            return;
-        }
+            // Enforce turn order
+            if (this.moveCount % 2 === 0 && socket !== this.player1) {
+                console.log("Not player 1's turn");
+                return;
+            }
+            if (this.moveCount % 2 === 1 && socket !== this.player2) {
+                console.log("Not player 2's turn");
+                return;
+            }
 
+            const result = this.board.move(move);
+            // if (!result) throw new Error("Invalid move");
 
-        if (this.board.isGameOver()) {
-            this.player1.emit(JSON.stringify({
-                type: GAME_OVER,
-                payload: {
-                    winner: this.board.turn() === 'w' ? "balack" : "white"
-                }
-            }))
-            this.player2.emit(JSON.stringify({
-                type: GAME_OVER,
-                payload: {
-                    winner: this.board.turn() === 'w' ? "balack" : "white"
-                }
-            }))
-            return;
-        }
-        console.log("ouside the move send");
-        if (this.moveCount % 2 === 0) {
-            console.log("inside themove send")
-            this.player2.send(JSON.stringify({
-                type: MOVE,
-                payload: move
-            }))
-        } else {
+            // Invalid move
+            if (!result) {
+                console.log("Invalid move:", move);
+                socket.send(JSON.stringify({
+                    type: INVALID_MOVE,
+                    payload: move
+                }));
+                return;
+            }
+
+            // Valid move → broadcast to both players
             this.player1.send(JSON.stringify({
                 type: MOVE,
                 payload: move
-            }))
+            }));
+            this.player2.send(JSON.stringify({
+                type: MOVE,
+                payload: move
+            }));
+
+            this.moveCount++;
+
+            // Check game over
+            if (this.board.isGameOver()) {
+                const winner = this.board.turn() === 'w' ? "black" : "white";
+                this.player1.send(JSON.stringify({
+                    type: GAME_OVER,
+                    payload: { winner }
+                }));
+                this.player2.send(JSON.stringify({
+                    type: GAME_OVER,
+                    payload: { winner }
+                }));
+            }
+        } catch (e) {
+            console.log("Invalid move:", move);
+            socket.send(JSON.stringify({
+                type: "INVALID_MOVE",
+                payload: move
+            }));
+            return;
         }
-        this.moveCount++;
     }
 }

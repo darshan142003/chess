@@ -24,50 +24,58 @@ class Game {
         }));
     }
     makeMove(socket, move) {
-        if (this.moveCount % 2 === 0 && socket !== this.player1) {
-            console.log("return from player 1");
-            return;
-        }
-        if (this.moveCount % 2 === 1 && socket !== this.player2) {
-            console.log("Rturn from player 2");
-            return;
-        }
         try {
-            this.board.move(move);
-        }
-        catch (e) {
-            return;
-        }
-        if (this.board.isGameOver()) {
-            this.player1.emit(JSON.stringify({
-                type: messages_1.GAME_OVER,
-                payload: {
-                    winner: this.board.turn() === 'w' ? "balack" : "white"
-                }
-            }));
-            this.player2.emit(JSON.stringify({
-                type: messages_1.GAME_OVER,
-                payload: {
-                    winner: this.board.turn() === 'w' ? "balack" : "white"
-                }
-            }));
-            return;
-        }
-        console.log("ouside the move send");
-        if (this.moveCount % 2 === 0) {
-            console.log("inside themove send");
-            this.player2.send(JSON.stringify({
-                type: messages_1.MOVE,
-                payload: move
-            }));
-        }
-        else {
+            // Enforce turn order
+            if (this.moveCount % 2 === 0 && socket !== this.player1) {
+                console.log("Not player 1's turn");
+                return;
+            }
+            if (this.moveCount % 2 === 1 && socket !== this.player2) {
+                console.log("Not player 2's turn");
+                return;
+            }
+            const result = this.board.move(move);
+            // if (!result) throw new Error("Invalid move");
+            // Invalid move
+            if (!result) {
+                console.log("Invalid move:", move);
+                socket.send(JSON.stringify({
+                    type: messages_1.INVALID_MOVE,
+                    payload: move
+                }));
+                return;
+            }
+            // Valid move → broadcast to both players
             this.player1.send(JSON.stringify({
                 type: messages_1.MOVE,
                 payload: move
             }));
+            this.player2.send(JSON.stringify({
+                type: messages_1.MOVE,
+                payload: move
+            }));
+            this.moveCount++;
+            // Check game over
+            if (this.board.isGameOver()) {
+                const winner = this.board.turn() === 'w' ? "black" : "white";
+                this.player1.send(JSON.stringify({
+                    type: messages_1.GAME_OVER,
+                    payload: { winner }
+                }));
+                this.player2.send(JSON.stringify({
+                    type: messages_1.GAME_OVER,
+                    payload: { winner }
+                }));
+            }
         }
-        this.moveCount++;
+        catch (e) {
+            console.log("Invalid move:", move);
+            socket.send(JSON.stringify({
+                type: "INVALID_MOVE",
+                payload: move
+            }));
+            return;
+        }
     }
 }
 exports.Game = Game;

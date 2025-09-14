@@ -1,17 +1,19 @@
 import { useSocket } from "../hooks/useSocket";
 import ChessBoard from "../components/ChessBoard";
 import { useEffect, useState } from "react";
-import { Chess } from "chess.js";
+import { Chess, type Square } from "chess.js";
 
 export const INIT_GAME = "init_game";
 export const MOVE = "move";
 export const GAME_OVER = "game_over";
+export const INVALID_MOVE = "invalid_move";
 
 export default function Game() {
     const socket = useSocket();
     const [chess, setChess] = useState(new Chess());
     const [board, setBoard] = useState(chess.board());
     const [started, setStarted] = useState(false);
+    const [from, setFrom] = useState<Square | null>(null);
     useEffect(() => {
         if (!socket) return;
 
@@ -35,6 +37,9 @@ export default function Game() {
                 case GAME_OVER:
                     console.log("Game Over");
                     break;
+                case INVALID_MOVE:
+                    setFrom(null); // reset the selection
+                    break;
                 default:
                     break;
             }
@@ -48,7 +53,7 @@ export default function Game() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
                 {/* Chessboard */}
                 <div className="w-[640px] h-[640px]">
-                    <ChessBoard chess={chess} setBoard={setBoard} socket={socket} board={board} />
+                    <ChessBoard from={from} socket={socket} board={board} setFrom={setFrom} />
                 </div>
 
                 {/* Info panel */}
