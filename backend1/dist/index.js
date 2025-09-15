@@ -1,10 +1,15 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const ws_1 = require("ws");
-const GameManager_1 = require("./GameManager");
-const wss = new ws_1.WebSocketServer({ port: 8080 });
-const gameManager = new GameManager_1.GameManager();
-wss.on('connection', function connection(ws) {
-    gameManager.addUser(ws);
-    ws.on('disconnect', () => gameManager.removeUser(ws));
-});
+const express_1 = __importDefault(require("express"));
+const authRoutes_1 = require("./auth/authRoutes");
+require("./ws/wsServer"); // Import the WS server file so it runs
+const cors_1 = __importDefault(require("cors"));
+const app = (0, express_1.default)();
+app.use(express_1.default.json());
+app.use((0, cors_1.default)());
+// HTTP routes for login/signup
+app.use("/auth", authRoutes_1.authRoutes);
+app.listen(3000, () => console.log("HTTP server running on port 3000"));

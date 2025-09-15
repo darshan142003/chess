@@ -1,20 +1,22 @@
 import { WebSocket } from "ws";
 import { Chess } from "Chess.js"
 import { GAME_OVER, INIT_GAME, INVALID_MOVE, MOVE } from "./messages";
-
+import { PrismaClient } from "@prisma/client";
 export class Game {
-
+    private prisma = new PrismaClient();
     public player1: WebSocket;
     public player2: WebSocket;
     private board: Chess;
     private startTime: Date;
     private moveCount = 0;
+    private gameId: number;
 
-    constructor(player1: WebSocket, player2: WebSocket) {
+    constructor(player1: WebSocket, player2: WebSocket, gameId: number) {
         this.player1 = player1;
         this.player2 = player2;
         this.board = new Chess();
         this.startTime = new Date();
+        this.gameId = gameId;
         this.player1.send(JSON.stringify({
             type: INIT_GAME,
             payload: {
@@ -29,7 +31,7 @@ export class Game {
         }))
     }
 
-    makeMove(socket: WebSocket, move: { from: string; to: string }) {
+    async makeMove(socket: WebSocket, move: { from: string; to: string }) {
 
         try {
             // Enforce turn order
@@ -65,6 +67,13 @@ export class Game {
                 payload: move
             }));
 
+            await this.prisma.move.create({
+                data: {
+                    gameId: this.gameId,
+                    from: move.from,
+                    to: move.to
+                }
+            })
             this.moveCount++;
 
             // Check game over

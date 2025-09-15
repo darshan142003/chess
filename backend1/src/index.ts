@@ -1,11 +1,12 @@
-import { WebSocketServer } from 'ws';
-import { GameManager } from './GameManager';
+import express from "express";
+import { authRoutes } from "./auth/authRoutes";
+import "./ws/wsServer"; // Import the WS server file so it runs
+import cors from "cors";
+const app = express();
+app.use(express.json());
+app.use(cors());
 
-const wss = new WebSocketServer({ port: 8080 });
+// HTTP routes for login/signup
+app.use("/auth", authRoutes);
 
-const gameManager = new GameManager();
-wss.on('connection', function connection(ws) {
-
-    gameManager.addUser(ws);
-    ws.on('disconnect', () => gameManager.removeUser(ws));
-});
+app.listen(3000, () => console.log("HTTP server running on port 3000"));
