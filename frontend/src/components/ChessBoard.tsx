@@ -22,6 +22,8 @@ export default function ChessBoard({
         squares = [...squares].reverse();
     }
 
+    const normalize = (c: Color) => (c === "w" ? "white" : "black")
+
     return (
         <div className="grid grid-cols-8 grid-rows-8 w-full h-full">
             {squares.map((square, i) => {
@@ -42,7 +44,9 @@ export default function ChessBoard({
                         key={i}
                         onClick={() => {
                             if (!from) {
-                                setFrom(squareRepresentation);
+                                if (square && square.type && normalize(square.color) === color) {
+                                    setFrom(squareRepresentation);
+                                }
                             } else {
                                 const move = { from, to: squareRepresentation };
                                 socket.send(

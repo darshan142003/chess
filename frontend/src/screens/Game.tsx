@@ -11,6 +11,11 @@ export const MOVE = "move";
 export const GAME_OVER = "game_over";
 export const INVALID_MOVE = "invalid_move";
 
+export const pieceSymbols: Record<string, string> = {
+    p: "♙", r: "♖", n: "♘", b: "♗", q: "♕", k: "♔",
+    P: "♟︎", R: "♜", N: "♞", B: "♝", Q: "♛", K: "♚"
+};
+
 export default function Game() {
     const socket = useSocket();
     const [chess, setChess] = useState(new Chess());
@@ -41,9 +46,12 @@ export default function Game() {
 
                 case MOVE:
                     chess.move(message.payload.move);
+                    const fromSquare = message.payload.move.from;
+                    const toSquare = message.payload.move.to;
+                    // const piece = message.payload.move.piece;
                     setMoves((prev) => [
                         ...prev,
-                        `from ${message.payload.move.from} to ${message.payload.move.to}`,
+                        `${message.payload.move.from} to ${message.payload.move.to}`,
                     ]);
                     setBoard(chess.board());
 
