@@ -1,12 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 
-export default function Clock({ myTurn }: { myTurn: boolean }) {
-    const [timeLeft, setTimeLeft] = useState(600);
-
+export default function Clock({
+    isActive,
+    initialTime = 600,
+    label,
+}: {
+    isActive: boolean;
+    initialTime?: number;
+    label?: string;
+}) {
+    const [timeLeft, setTimeLeft] = useState(initialTime);
     const intervalRef = useRef<number | null>(null);
 
     useEffect(() => {
-        if (myTurn) {
+        if (isActive) {
             if (intervalRef.current === null) {
                 intervalRef.current = window.setInterval(() => {
                     setTimeLeft((prev) => {
@@ -31,14 +38,20 @@ export default function Clock({ myTurn }: { myTurn: boolean }) {
                 intervalRef.current = null;
             }
         };
-    }, [myTurn]);
+    }, [isActive]);
 
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
 
     return (
-        <div className="text-white font-extrabold text-3xl">
-            {minutes}:{seconds < 10 ? `0${seconds}` : seconds}
+        <div
+            className={`flex items-center justify-between gap-2 px-3 py-1 w-[120px] rounded-lg text-sm font-bold shadow-md 
+      ${isActive ? "bg-green-600 text-white" : "bg-gray-800 text-gray-200"}`}
+        >
+            {label && <span className="text-xs font-semibold">{label}</span>}
+            <span>
+                {minutes}:{seconds < 10 ? `0${seconds}` : seconds}
+            </span>
         </div>
     );
 }

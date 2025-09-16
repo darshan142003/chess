@@ -31,7 +31,7 @@ export class Game {
         }))
     }
 
-    async makeMove(socket: WebSocket, move: { from: string; to: string }) {
+    async makeMove(socket: WebSocket, payload: { move: { from: string; to: string }, color: string }) {
 
         try {
             // Enforce turn order
@@ -44,15 +44,15 @@ export class Game {
                 return;
             }
 
-            const result = this.board.move(move);
+            const result = this.board.move(payload.move);
             // if (!result) throw new Error("Invalid move");
 
             // Invalid move
             if (!result) {
-                console.log("Invalid move:", move);
+                console.log("Invalid move:", payload.move);
                 socket.send(JSON.stringify({
                     type: INVALID_MOVE,
-                    payload: move
+                    payload: payload.move
                 }));
                 return;
             }
@@ -60,18 +60,18 @@ export class Game {
             // Valid move → broadcast to both players
             this.player1.send(JSON.stringify({
                 type: MOVE,
-                payload: move
+                payload: payload
             }));
             this.player2.send(JSON.stringify({
                 type: MOVE,
-                payload: move
+                payload: payload
             }));
 
             await this.prisma.move.create({
                 data: {
                     gameId: this.gameId,
-                    from: move.from,
-                    to: move.to
+                    from: payload.move.from,
+                    to: payload.move.to
                 }
             })
             this.moveCount++;
@@ -89,10 +89,10 @@ export class Game {
                 }));
             }
         } catch (e) {
-            console.log("Invalid move:", move);
+            console.log("Invalid move:", payload.move);
             socket.send(JSON.stringify({
                 type: "INVALID_MOVE",
-                payload: move
+                payload: payload.move
             }));
             return;
         }

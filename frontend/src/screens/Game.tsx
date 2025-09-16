@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Chess, type Square } from "chess.js";
 
 import Moves from "../components/Moves";
-import CLock from "../components/Clock";
+import Clock from "../components/Clock";
 
 export const INIT_GAME = "init_game";
 export const MOVE = "move";
@@ -18,7 +18,10 @@ export default function Game() {
     const [started, setStarted] = useState(false);
     const [from, setFrom] = useState<Square | null>(null);
     const [moves, setMoves] = useState<string[]>([]);
-    const [myTurn, setMyTurn] = useState(false);
+    const [myColor, setMyColor] = useState("");
+    const [whiteTurn, setWhiteTurn] = useState(true);
+    const [blackTurn, setBlackTurn] = useState(false);
+
     useEffect(() => {
         if (!socket) return;
 
@@ -32,21 +35,36 @@ export default function Game() {
                     setChess(newChess);
                     setBoard(newChess.board());
                     setStarted(true);
-                    message.payload.color === "white" ? setMyTurn(true) : setMyTurn(false);
+                    setMyColor(message.payload.color);
                     console.log("Game initialised");
                     break;
+
                 case MOVE:
-                    chess.move(message.payload);
-                    setMoves((prev) => [...prev, `from ${message.payload.from} to ${message.payload.to}`])
+                    chess.move(message.payload.move);
+                    setMoves((prev) => [
+                        ...prev,
+                        `from ${message.payload.move.from} to ${message.payload.move.to}`,
+                    ]);
                     setBoard(chess.board());
+
+                    if (message.payload.color === "white") {
+                        setWhiteTurn(false);
+                        setBlackTurn(true);
+                    } else {
+                        setBlackTurn(false);
+                        setWhiteTurn(true);
+                    }
                     console.log("Move Made");
                     break;
+
                 case GAME_OVER:
                     console.log("Game Over");
                     break;
+
                 case INVALID_MOVE:
                     setFrom(null); // reset the selection
                     break;
+
                 default:
                     break;
             }
@@ -56,40 +74,59 @@ export default function Game() {
     if (!socket) return <div>Connecting...</div>;
 
     return (
-        <div className="flex justify-center items-start pt-10 h-screen w-screen bg-gray-900">
-            <div className="flex gap-10">
-                {/* Chessboard */}
-                <div className="w-[640px] h-[640px]">
-                    <ChessBoard from={from} socket={socket} board={board} setFrom={setFrom} />
+        <div className="flex justify-center items-center h-screen w-screen bg-gray-900 text-white">
+            <div className="flex gap-8">
+                {/* Left side (Board + Clocks) */}
+                <div className="flex flex-col items-center">
+                    {/* Clocks only visible after game started */}
+                    {started && myColor === "white" && (
+                        <Clock isActive={blackTurn} label="Black" />
+                    )}
+                    {started && myColor === "black" && (
+                        <Clock isActive={whiteTurn} label="White" />
+                    )}
 
+                    {/* Board always visible */}
+                    <div className="w-[640px] h-[640px] shadow-lg border-2 border-gray-700">
+                        <ChessBoard
+                            color={myColor}
+                            board={board}
+                            socket={socket}
+                            from={from}
+                            setFrom={setFrom}
+                        />
+                    </div>
+
+                    {started && myColor === "white" && (
+                        <Clock isActive={whiteTurn} label="White" />
+                    )}
+                    {started && myColor === "black" && (
+                        <Clock isActive={blackTurn} label="Black" />
+                    )}
                 </div>
 
-                {/* Info panel */}
-                <div className={`flex  h-[640px] w-[320px] ${started ? "bg-slate-800" : ""}`}>
-
-                    {!started && (
-                        <div className="flex flex-col justify-center items-center space-y-6 h-full w-full">
+                {/* Right side (Info panel) */}
+                <div className="flex flex-col h-[640px] w-[280px] bg-slate-800 rounded-lg shadow-lg overflow-hidden">
+                    {!started ? (
+                        <div className="flex flex-col justify-center items-center flex-1 space-y-6">
                             <button
                                 onClick={() => {
                                     socket?.send(JSON.stringify({ type: INIT_GAME }));
                                 }}
-                                className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition flex "
+                                className="bg-green-600 text-white px-6 py-3 rounded-md hover:bg-green-700 transition"
                             >
                                 Play Online
                             </button>
                         </div>
-                    )}
-                    {started && (
-                        <div >
-                            <CLock myTurn={myTurn} />
-                            <div className="flex justify-center w-full"><Moves moves={moves} /> </div>
+                    ) : (
+                        <div className="flex flex-col flex-1 p-4 h-full w-full">
+                            <div className="flex-1 overflow-y-auto bg-gray-900 rounded-md ">
+                                <Moves moves={moves} />
+                            </div>
                         </div>
-
                     )}
-
                 </div>
             </div>
         </div>
-
     );
 }

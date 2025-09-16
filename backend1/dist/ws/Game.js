@@ -35,7 +35,7 @@ class Game {
             }
         }));
     }
-    makeMove(socket, move) {
+    makeMove(socket, payload) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 // Enforce turn order
@@ -47,31 +47,31 @@ class Game {
                     console.log("Not player 2's turn");
                     return;
                 }
-                const result = this.board.move(move);
+                const result = this.board.move(payload.move);
                 // if (!result) throw new Error("Invalid move");
                 // Invalid move
                 if (!result) {
-                    console.log("Invalid move:", move);
+                    console.log("Invalid move:", payload.move);
                     socket.send(JSON.stringify({
                         type: messages_1.INVALID_MOVE,
-                        payload: move
+                        payload: payload.move
                     }));
                     return;
                 }
                 // Valid move → broadcast to both players
                 this.player1.send(JSON.stringify({
                     type: messages_1.MOVE,
-                    payload: move
+                    payload: payload
                 }));
                 this.player2.send(JSON.stringify({
                     type: messages_1.MOVE,
-                    payload: move
+                    payload: payload
                 }));
                 yield this.prisma.move.create({
                     data: {
                         gameId: this.gameId,
-                        from: move.from,
-                        to: move.to
+                        from: payload.move.from,
+                        to: payload.move.to
                     }
                 });
                 this.moveCount++;
@@ -89,10 +89,10 @@ class Game {
                 }
             }
             catch (e) {
-                console.log("Invalid move:", move);
+                console.log("Invalid move:", payload.move);
                 socket.send(JSON.stringify({
                     type: "INVALID_MOVE",
-                    payload: move
+                    payload: payload.move
                 }));
                 return;
             }
